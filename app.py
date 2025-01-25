@@ -32,54 +32,50 @@ class ArchitectAgent:
         )
         return response.choices[0].message.content
     
-    def generate_questions(self, project_description: str, challenges: List[str]) -> List[str]:
+    def generate_questions(self, project_description: str, main_challenge: str, challenges: List[str]) -> List[str]:
         """
-        Generates specific, quantitative questions about the project
-        Args:
-            project_description: Initial project description
-            challenges: List of selected challenges
-        Returns:
-            List of precise, measurable questions
+        Generates a mix of quantitative and qualitative questions
         """
         prompt = f"""
-        As an expert software architect, generate specific, quantitative questions to gather detailed information about this project.
+        As an expert software architect, generate a balanced mix of quantitative and qualitative questions to gather comprehensive information about this project.
         
         Project Description: {project_description}
-        Main Challenges: {', '.join(challenges)}
+        Main Challenge: {main_challenge}
+        Additional Challenges: {', '.join(challenges)}
         
-        Generate 8-10 precise questions that will help determine concrete technical and organizational requirements. Focus on:
+        Generate 10-12 questions that combine specific metrics with strategic insights. Focus on:
 
-        1. Business Context & Metrics:
-           - Expected user base and growth projections
-           - Specific performance/availability requirements
-           - Compliance and regulatory requirements
+        1. Problem Understanding & Context:
+           - Core problem definition and impact
+           - Business goals and success criteria
+           - Current pain points and limitations
 
-        2. Technical Constraints & Scale:
-           - Current/expected transaction volumes
-           - Data storage and processing requirements
-           - Integration requirements with specific systems
+        2. Technical & Operational Requirements:
+           - Scale and performance needs (with specific metrics)
+           - Integration points and dependencies
+           - Operational constraints and requirements
 
-        3. Team & Organization:
-           - Current team size and expertise levels
-           - Development practices and tools in use
-           - Organizational constraints and preferences
+        3. Team & Organizational Context:
+           - Team capabilities and structure
+           - Stakeholder expectations
+           - Cultural and process considerations
 
-        4. Implementation Context:
-           - Specific timeline milestones
-           - Budget constraints and ROI expectations
-           - Deployment and operational requirements
+        4. Implementation & Delivery:
+           - Timeline and resource constraints
+           - Risk factors and mitigation strategies
+           - Quality and compliance requirements
 
         IMPORTANT: 
-        - Make questions specific and quantifiable where possible
-        - Ask for concrete numbers, percentages, or specific requirements
-        - Focus on measurable aspects that will impact architectural decisions
+        - Balance specific metrics with strategic insights
+        - Include both quantitative measures and qualitative aspects
+        - Focus on both immediate needs and long-term implications
+        - Ensure questions help understand the main challenge deeply
         
         Return ONLY a JSON array of strings, with each string being a question.
-        Format example: ["What is the expected peak number of concurrent users in the first year?", "What is your target response time for critical transactions in milliseconds?"]
         """
         
         messages = [
-            {"role": "system", "content": "You are an expert software architect. Generate specific, measurable questions and always respond with valid JSON arrays."},
+            {"role": "system", "content": "You are an expert software architect. Generate a balanced mix of strategic and specific questions."},
             {"role": "user", "content": prompt}
         ]
         
@@ -89,35 +85,33 @@ class ArchitectAgent:
         except json.JSONDecodeError:
             st.error("Error parsing response. Using fallback questions.")
             return [
-                "What is your expected user base size and growth rate for the first year?",
-                "What are your specific performance requirements (response times, throughput)?",
-                "What is your expected data volume and growth rate?",
-                "What specific regulatory requirements must be met?",
-                "What is your current team size and technical expertise distribution?",
-                "What is your specific timeline and major milestones?",
-                "What is your budget range for implementation and maintenance?",
-                "What are your specific availability and reliability requirements?"
+                "What specific problem or pain point is driving this project?",
+                "What are your key success criteria for this solution?",
+                "What is your expected user base size and growth rate?",
+                "What specific technical constraints must be considered?",
+                "How does this project align with your business strategy?",
+                "What are your specific performance requirements?",
+                "What is your team's current experience with similar projects?",
+                "What are the most critical risks you foresee?",
+                "What integration points are required with existing systems?",
+                "What is your preferred approach to delivering this solution?"
             ]
     
     def generate_architecture_plan(self, project_info: Dict, answers: Dict) -> Dict:
         """
-        Generates two architectural options with technical, process, and people dimensions
-        Args:
-            project_info: Dictionary containing project description and challenges
-            answers: Dictionary containing answers to the generated questions
-        Returns:
-            Dictionary containing the architecture plan options
+        Generates architecture options with clear rationale and perspectives
         """
         analysis_prompt = f"""
         Analyze this software project information:
         
         Project Description: {project_info['description']}
-        Challenges: {', '.join(project_info['challenges'])}
+        Main Challenge: {project_info['main_challenge']}
+        Additional Challenges: {', '.join(project_info['challenges'])}
         
-        Additional Information:
+        Detailed Responses:
         {json.dumps(answers, indent=2)}
         
-        Provide a detailed analysis focusing on technical requirements, process needs, and organizational impacts.
+        Provide a detailed analysis focusing on how the solution addresses the main challenge while considering all requirements.
         """
         
         messages = [
@@ -132,50 +126,42 @@ class ArchitectAgent:
         
         {analysis}
         
-        Generate TWO distinct architectural options. For each option, provide detailed recommendations across three dimensions.
+        Generate TWO distinct architectural options that specifically address the main challenge while considering all requirements.
         
-        VERY IMPORTANT: You must return a JSON object that follows this EXACT structure:
-        {{
-            "option1": {{
-                "technical": "string with markdown content",
-                "process": "string with markdown content",
-                "people": "string with markdown content",
-                "rationale": "string with markdown content"
-            }},
-            "option2": {{
-                "technical": "string with markdown content",
-                "process": "string with markdown content",
-                "people": "string with markdown content",
-                "rationale": "string with markdown content"
-            }}
-        }}
+        For each option, provide a comprehensive view across these perspectives:
 
-        For each option include:
         1. Technical Architecture (in the 'technical' field):
-           - Core technologies and patterns
+           - How the solution addresses the main challenge
+           - Core technologies and patterns with justification
            - System components and their interactions
-           - Key technical decisions
-           - Expected benefits and trade-offs
+           - Scalability and performance considerations
 
         2. Key Processes (in the 'process' field):
-           - Development and deployment processes
-           - Operational procedures
-           - Quality assurance approaches
-           - Change management recommendations
+           - Development and delivery approach
+           - Operational procedures and monitoring
+           - Risk management and quality assurance
+           - Change and release management
 
         3. People & Organization (in the 'people' field):
-           - Team structure recommendations
-           - Required skills and training needs
-           - Collaboration patterns
-           - Organizational changes needed
+           - Team structure and responsibilities
+           - Required skills and learning curve
+           - Collaboration and communication patterns
+           - Cultural and organizational impact
 
         4. Rationale (in the 'rationale' field):
-           - Clear explanation of why this option was chosen
-           - Specific benefits and advantages
-           - Potential risks and how to mitigate them
-           - Cost and timeline implications
+           - Direct mapping to the main challenge
+           - Key advantages and differentiators
+           - Trade-offs and their justification
+           - Implementation strategy and timeline
+           - Cost implications and ROI considerations
 
-        Format all content using markdown. Use headers, bullet points, and sections to make it readable.
+        IMPORTANT:
+        - Clearly explain how each option addresses the main challenge
+        - Provide concrete examples and specific recommendations
+        - Include both immediate and long-term considerations
+        - Highlight key decision points and their implications
+
+        Format all content using markdown with clear sections and bullet points.
         """
         
         messages.append({"role": "assistant", "content": analysis})
@@ -233,10 +219,6 @@ def initialize_session_state():
 def main():
     """
     Main application function that handles the UI and workflow
-    Implements a three-step process:
-    1. Project Description Input
-    2. Detailed Questions
-    3. Architecture Plan Display
     """
     st.title("🏗️ Architect Guru")
     st.subheader("Your AI Software Architecture Consultant")
@@ -245,42 +227,69 @@ def main():
     agent = ArchitectAgent()
     initialize_session_state()
     
+    # Add a reset button in the sidebar that's always visible
+    with st.sidebar:
+        st.write("### Navigation")
+        if st.button("🏠 Reset / Start Over", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+        
+        # Show current step
+        st.write("Current Step:", 
+                ["Project Description", "Analysis Questions", "Architecture Plan"][st.session_state.current_step])
+    
     # Step 1: Project Description Input
     if st.session_state.current_step == 0:
         st.write("### Project Description")
         with st.form("project_form"):
-            # Form inputs for project details
             project_name = st.text_input("Project Name", 
                                        value=st.session_state.form_data.get('project_name', ''))
-            project_description = st.text_area("Project Description",
-                                             value=st.session_state.form_data.get('project_description', ''))
-            challenges = st.multiselect(
-                "Select your main challenges:",
+            
+            # Add main challenge input
+            main_challenge = st.text_area(
+                "What is the main challenge or problem you're trying to solve?",
+                value=st.session_state.form_data.get('main_challenge', ''),
+                help="Describe the core problem or challenge that motivated this project"
+            )
+            
+            project_description = st.text_area(
+                "Project Description",
+                value=st.session_state.form_data.get('project_description', ''),
+                help="Provide a detailed description of your project"
+            )
+            
+            additional_challenges = st.multiselect(
+                "Select additional challenges:",
                 ["Security", "Time to Market", "Performance", "User Experience", "Scalability", "Cost Efficiency"]
             )
+            
             submit_button = st.form_submit_button("Generate Questions")
             
-            # Handle form submission
-            if submit_button and project_description:
-                # Store form data for persistence
+            if submit_button and project_description and main_challenge:
                 st.session_state.form_data = {
                     'project_name': project_name,
+                    'main_challenge': main_challenge,
                     'project_description': project_description
                 }
                 st.session_state.project_info = {
                     "description": project_description,
-                    "challenges": challenges
+                    "main_challenge": main_challenge,
+                    "challenges": additional_challenges
                 }
-                # Generate questions based on input
                 with st.spinner("Generating questions..."):
                     st.session_state.questions = agent.generate_questions(
-                        project_description, challenges
+                        project_description, main_challenge, additional_challenges
                     )
                 st.session_state.current_step = 1
                 st.rerun()
-    
+
     # Step 2: Detailed Questions
     elif st.session_state.current_step == 1:
+        # Add a back button
+        if st.button("← Back to Project Description"):
+            st.session_state.current_step = 0
+            st.rerun()
+            
         st.write("### Project Analysis Questions")
         with st.form("questions_form"):
             # Display generated questions and collect answers
@@ -309,6 +318,11 @@ def main():
     
     # Step 3: Architecture Plan Display
     elif st.session_state.current_step == 2:
+        # Add a back button
+        if st.button("← Back to Questions"):
+            st.session_state.current_step = 1
+            st.rerun()
+            
         st.write("### Architecture Recommendations")
         
         option_tab1, option_tab2 = st.tabs(["Option 1", "Option 2"])
@@ -340,11 +354,6 @@ def main():
                 st.markdown(st.session_state.architecture_plan['option2']['people'])
             with rationale_tab2:
                 st.markdown(st.session_state.architecture_plan['option2']['rationale'])
-        
-        # Reset button
-        if st.button("Start Over"):
-            st.session_state.clear()
-            st.rerun()
 
 if __name__ == "__main__":
     main() 
