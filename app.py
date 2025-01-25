@@ -34,32 +34,52 @@ class ArchitectAgent:
     
     def generate_questions(self, project_description: str, challenges: List[str]) -> List[str]:
         """
-        Generates relevant questions about the project based on initial description
+        Generates specific, quantitative questions about the project
         Args:
             project_description: Initial project description
             challenges: List of selected challenges
         Returns:
-            List of questions to gather more project information
+            List of precise, measurable questions
         """
         prompt = f"""
-        As an expert software architect, generate relevant questions to gather more information about this project.
+        As an expert software architect, generate specific, quantitative questions to gather detailed information about this project.
         
         Project Description: {project_description}
         Main Challenges: {', '.join(challenges)}
         
-        Generate 5-8 specific questions about:
-        1. The industry and business context
-        2. Technical requirements and constraints
-        3. Team capabilities and resources
-        4. Timeline and budget considerations
-        5. Security and compliance needs (if applicable)
+        Generate 8-10 precise questions that will help determine concrete technical and organizational requirements. Focus on:
+
+        1. Business Context & Metrics:
+           - Expected user base and growth projections
+           - Specific performance/availability requirements
+           - Compliance and regulatory requirements
+
+        2. Technical Constraints & Scale:
+           - Current/expected transaction volumes
+           - Data storage and processing requirements
+           - Integration requirements with specific systems
+
+        3. Team & Organization:
+           - Current team size and expertise levels
+           - Development practices and tools in use
+           - Organizational constraints and preferences
+
+        4. Implementation Context:
+           - Specific timeline milestones
+           - Budget constraints and ROI expectations
+           - Deployment and operational requirements
+
+        IMPORTANT: 
+        - Make questions specific and quantifiable where possible
+        - Ask for concrete numbers, percentages, or specific requirements
+        - Focus on measurable aspects that will impact architectural decisions
         
-        IMPORTANT: Return ONLY a JSON array of strings, with each string being a question.
-        Format example: ["Question 1?", "Question 2?", "Question 3?"]
+        Return ONLY a JSON array of strings, with each string being a question.
+        Format example: ["What is the expected peak number of concurrent users in the first year?", "What is your target response time for critical transactions in milliseconds?"]
         """
         
         messages = [
-            {"role": "system", "content": "You are an expert software architect. Always respond with valid JSON arrays when asked."},
+            {"role": "system", "content": "You are an expert software architect. Generate specific, measurable questions and always respond with valid JSON arrays."},
             {"role": "user", "content": prompt}
         ]
         
@@ -67,26 +87,27 @@ class ArchitectAgent:
             response = self._get_completion(messages)
             return json.loads(response)
         except json.JSONDecodeError:
-            # Fallback in case of invalid JSON
             st.error("Error parsing response. Using fallback questions.")
             return [
-                "What industry is this project targeting?",
-                "What are your technical requirements and constraints?",
-                "What is your team size and technical expertise?",
-                "What is your timeline and budget?",
-                "What are your security and compliance requirements?"
+                "What is your expected user base size and growth rate for the first year?",
+                "What are your specific performance requirements (response times, throughput)?",
+                "What is your expected data volume and growth rate?",
+                "What specific regulatory requirements must be met?",
+                "What is your current team size and technical expertise distribution?",
+                "What is your specific timeline and major milestones?",
+                "What is your budget range for implementation and maintenance?",
+                "What are your specific availability and reliability requirements?"
             ]
     
     def generate_architecture_plan(self, project_info: Dict, answers: Dict) -> Dict:
         """
-        Generates a comprehensive architecture plan based on all gathered information
+        Generates two architectural options with technical, process, and people dimensions
         Args:
             project_info: Dictionary containing project description and challenges
             answers: Dictionary containing answers to the generated questions
         Returns:
-            Dictionary containing three sections of the architecture plan
+            Dictionary containing the architecture plan options
         """
-        # First, analyze the information
         analysis_prompt = f"""
         Analyze this software project information:
         
@@ -96,7 +117,7 @@ class ArchitectAgent:
         Additional Information:
         {json.dumps(answers, indent=2)}
         
-        Provide a detailed analysis of the requirements and constraints.
+        Provide a detailed analysis focusing on technical requirements, process needs, and organizational impacts.
         """
         
         messages = [
@@ -106,25 +127,52 @@ class ArchitectAgent:
         
         analysis = self._get_completion(messages)
         
-        # Generate the architecture plan
         plan_prompt = f"""
         Based on this analysis:
         
         {analysis}
         
-        Generate a comprehensive architecture plan with three different versions.
-        
+        Generate TWO distinct architectural options. For each option, provide detailed recommendations across three dimensions:
+
+        1. Technical Architecture:
+           - Core technologies and patterns
+           - System components and their interactions
+           - Key technical decisions and their rationale
+           - Expected benefits and potential trade-offs
+
+        2. Key Processes:
+           - Development and deployment processes
+           - Operational procedures
+           - Quality assurance approaches
+           - Change management recommendations
+
+        3. People & Organization:
+           - Team structure recommendations
+           - Required skills and training needs
+           - Collaboration patterns
+           - Organizational changes needed
+
         IMPORTANT: Return your response as a JSON object with exactly this structure:
         {{
-            "technical": "markdown content here",
-            "management": "markdown content here",
-            "executive": "markdown content here"
+            "option1": {{
+                "technical": "markdown content with technical architecture details",
+                "process": "markdown content with key process recommendations",
+                "people": "markdown content with organizational recommendations",
+                "rationale": "markdown content explaining the reasoning and benefits"
+            }},
+            "option2": {{
+                "technical": "markdown content with technical architecture details",
+                "process": "markdown content with key process recommendations",
+                "people": "markdown content with organizational recommendations",
+                "rationale": "markdown content explaining the reasoning and benefits"
+            }}
         }}
-        
-        Include in each section:
-        1. Technical Overview: Detailed technical architecture including patterns, technologies, and implementation guidelines
-        2. Management Summary: Focus on resources, timeline, risks, and key decisions
-        3. Executive Brief: High-level overview focusing on business value, costs, and advantages
+
+        For each recommendation:
+        - Clearly explain the rationale behind each decision
+        - Highlight specific benefits and potential trade-offs
+        - Include quantitative impacts where possible
+        - Reference industry best practices or successful case studies
         """
         
         messages.append({"role": "assistant", "content": analysis})
@@ -134,12 +182,20 @@ class ArchitectAgent:
             response = self._get_completion(messages)
             return json.loads(response)
         except json.JSONDecodeError:
-            # Fallback in case of invalid JSON
             st.error("Error parsing architecture plan. Using fallback response.")
             return {
-                "technical": "# Technical Overview\n\nUnable to generate technical overview. Please try again.",
-                "management": "# Management Summary\n\nUnable to generate management summary. Please try again.",
-                "executive": "# Executive Brief\n\nUnable to generate executive brief. Please try again."
+                "option1": {
+                    "technical": "# Technical Architecture\n\nUnable to generate technical details. Please try again.",
+                    "process": "# Key Processes\n\nUnable to generate process recommendations. Please try again.",
+                    "people": "# People & Organization\n\nUnable to generate organizational recommendations. Please try again.",
+                    "rationale": "# Rationale & Benefits\n\nUnable to generate rationale. Please try again."
+                },
+                "option2": {
+                    "technical": "# Technical Architecture\n\nUnable to generate technical details. Please try again.",
+                    "process": "# Key Processes\n\nUnable to generate process recommendations. Please try again.",
+                    "people": "# People & Organization\n\nUnable to generate organizational recommendations. Please try again.",
+                    "rationale": "# Rationale & Benefits\n\nUnable to generate rationale. Please try again."
+                }
             }
 
 def initialize_session_state():
@@ -239,17 +295,37 @@ def main():
     
     # Step 3: Architecture Plan Display
     elif st.session_state.current_step == 2:
-        st.write("### Architecture Recommendation")
+        st.write("### Architecture Recommendations")
         
-        # Display the architecture plan in tabs
-        tab1, tab2, tab3 = st.tabs(["Technical Overview", "Management Summary", "Executive Brief"])
+        option_tab1, option_tab2 = st.tabs(["Option 1", "Option 2"])
         
-        with tab1:
-            st.markdown(st.session_state.architecture_plan['technical'])
-        with tab2:
-            st.markdown(st.session_state.architecture_plan['management'])
-        with tab3:
-            st.markdown(st.session_state.architecture_plan['executive'])
+        with option_tab1:
+            tech_tab1, proc_tab1, people_tab1, rationale_tab1 = st.tabs([
+                "Technical Architecture", "Key Processes", 
+                "People & Organization", "Rationale & Benefits"
+            ])
+            with tech_tab1:
+                st.markdown(st.session_state.architecture_plan['option1']['technical'])
+            with proc_tab1:
+                st.markdown(st.session_state.architecture_plan['option1']['process'])
+            with people_tab1:
+                st.markdown(st.session_state.architecture_plan['option1']['people'])
+            with rationale_tab1:
+                st.markdown(st.session_state.architecture_plan['option1']['rationale'])
+        
+        with option_tab2:
+            tech_tab2, proc_tab2, people_tab2, rationale_tab2 = st.tabs([
+                "Technical Architecture", "Key Processes", 
+                "People & Organization", "Rationale & Benefits"
+            ])
+            with tech_tab2:
+                st.markdown(st.session_state.architecture_plan['option2']['technical'])
+            with proc_tab2:
+                st.markdown(st.session_state.architecture_plan['option2']['process'])
+            with people_tab2:
+                st.markdown(st.session_state.architecture_plan['option2']['people'])
+            with rationale_tab2:
+                st.markdown(st.session_state.architecture_plan['option2']['rationale'])
         
         # Reset button
         if st.button("Start Over"):
