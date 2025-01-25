@@ -23,7 +23,7 @@ class ArchitectAgent:
     
     def generate_questions(self, project_description: str, challenges: List[str]) -> List[str]:
         prompt = f"""
-        As an expert software architect, generate relevant questions to gather more information about this project:
+        As an expert software architect, generate relevant questions to gather more information about this project.
         
         Project Description: {project_description}
         Main Challenges: {', '.join(challenges)}
@@ -35,16 +35,28 @@ class ArchitectAgent:
         4. Timeline and budget considerations
         5. Security and compliance needs (if applicable)
         
-        Return the questions as a JSON array of strings.
+        IMPORTANT: Return ONLY a JSON array of strings, with each string being a question.
+        Format example: ["Question 1?", "Question 2?", "Question 3?"]
         """
         
         messages = [
-            {"role": "system", "content": "You are an expert software architect."},
+            {"role": "system", "content": "You are an expert software architect. Always respond with valid JSON arrays when asked."},
             {"role": "user", "content": prompt}
         ]
         
-        response = self._get_completion(messages)
-        return json.loads(response)
+        try:
+            response = self._get_completion(messages)
+            return json.loads(response)
+        except json.JSONDecodeError:
+            # Fallback in case of invalid JSON
+            st.error("Error parsing response. Using fallback questions.")
+            return [
+                "What industry is this project targeting?",
+                "What are your technical requirements and constraints?",
+                "What is your team size and technical expertise?",
+                "What is your timeline and budget?",
+                "What are your security and compliance requirements?"
+            ]
     
     def generate_architecture_plan(self, project_info: Dict, answers: Dict) -> Dict:
         # First, analyze the information
