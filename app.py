@@ -1,20 +1,20 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 from typing import List, Dict
 import json
 
 #Test Commit
 
 # Configure page and API key
-st.set_page_config(page_title="Architect Guru", page_icon="🏗️", layout="wide")
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+st.set_page_config(page_title="Architect Guru", page_icon="��️", layout="wide")
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 class ArchitectAgent:
     def __init__(self):
         self.model = "gpt-3.5-turbo"
         
     def _get_completion(self, messages: List[Dict]) -> str:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=0.7
