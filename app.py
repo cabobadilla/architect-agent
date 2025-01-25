@@ -73,7 +73,7 @@ class ArchitectAgent:
         """
         
         messages = [
-            {"role": "system", "content": "You are an expert software architect."},
+            {"role": "system", "content": "You are an expert software architect. Always respond with valid JSON when requested."},
             {"role": "user", "content": analysis_prompt}
         ]
         
@@ -85,20 +85,35 @@ class ArchitectAgent:
         
         {analysis}
         
-        Generate a comprehensive architecture plan with three different versions:
-        1. Technical Overview: Detailed technical architecture including patterns, technologies, and implementation guidelines
-        2. Management Summary: Focus on resources, timeline, risks, and key decisions for project managers and tech leads
-        3. Executive Brief: High-level overview focusing on business value, costs, and strategic advantages
+        Generate a comprehensive architecture plan with three different versions.
         
-        Return the response as a JSON object with three keys: 'technical', 'management', and 'executive',
-        each containing markdown-formatted content.
+        IMPORTANT: Return your response as a JSON object with exactly this structure:
+        {{
+            "technical": "markdown content here",
+            "management": "markdown content here",
+            "executive": "markdown content here"
+        }}
+        
+        Include in each section:
+        1. Technical Overview: Detailed technical architecture including patterns, technologies, and implementation guidelines
+        2. Management Summary: Focus on resources, timeline, risks, and key decisions
+        3. Executive Brief: High-level overview focusing on business value, costs, and advantages
         """
         
         messages.append({"role": "assistant", "content": analysis})
         messages.append({"role": "user", "content": plan_prompt})
         
-        response = self._get_completion(messages)
-        return json.loads(response)
+        try:
+            response = self._get_completion(messages)
+            return json.loads(response)
+        except json.JSONDecodeError:
+            # Fallback in case of invalid JSON
+            st.error("Error parsing architecture plan. Using fallback response.")
+            return {
+                "technical": "# Technical Overview\n\nUnable to generate technical overview. Please try again.",
+                "management": "# Management Summary\n\nUnable to generate management summary. Please try again.",
+                "executive": "# Executive Brief\n\nUnable to generate executive brief. Please try again."
+            }
 
 def initialize_session_state():
     if 'current_step' not in st.session_state:
