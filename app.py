@@ -132,47 +132,50 @@ class ArchitectAgent:
         
         {analysis}
         
-        Generate TWO distinct architectural options. For each option, provide detailed recommendations across three dimensions:
+        Generate TWO distinct architectural options. For each option, provide detailed recommendations across three dimensions.
+        
+        VERY IMPORTANT: You must return a JSON object that follows this EXACT structure:
+        {{
+            "option1": {{
+                "technical": "string with markdown content",
+                "process": "string with markdown content",
+                "people": "string with markdown content",
+                "rationale": "string with markdown content"
+            }},
+            "option2": {{
+                "technical": "string with markdown content",
+                "process": "string with markdown content",
+                "people": "string with markdown content",
+                "rationale": "string with markdown content"
+            }}
+        }}
 
-        1. Technical Architecture:
+        For each option include:
+        1. Technical Architecture (in the 'technical' field):
            - Core technologies and patterns
            - System components and their interactions
-           - Key technical decisions and their rationale
-           - Expected benefits and potential trade-offs
+           - Key technical decisions
+           - Expected benefits and trade-offs
 
-        2. Key Processes:
+        2. Key Processes (in the 'process' field):
            - Development and deployment processes
            - Operational procedures
            - Quality assurance approaches
            - Change management recommendations
 
-        3. People & Organization:
+        3. People & Organization (in the 'people' field):
            - Team structure recommendations
            - Required skills and training needs
            - Collaboration patterns
            - Organizational changes needed
 
-        IMPORTANT: Return your response as a JSON object with exactly this structure:
-        {{
-            "option1": {{
-                "technical": "markdown content with technical architecture details",
-                "process": "markdown content with key process recommendations",
-                "people": "markdown content with organizational recommendations",
-                "rationale": "markdown content explaining the reasoning and benefits"
-            }},
-            "option2": {{
-                "technical": "markdown content with technical architecture details",
-                "process": "markdown content with key process recommendations",
-                "people": "markdown content with organizational recommendations",
-                "rationale": "markdown content explaining the reasoning and benefits"
-            }}
-        }}
+        4. Rationale (in the 'rationale' field):
+           - Clear explanation of why this option was chosen
+           - Specific benefits and advantages
+           - Potential risks and how to mitigate them
+           - Cost and timeline implications
 
-        For each recommendation:
-        - Clearly explain the rationale behind each decision
-        - Highlight specific benefits and potential trade-offs
-        - Include quantitative impacts where possible
-        - Reference industry best practices or successful case studies
+        Format all content using markdown. Use headers, bullet points, and sections to make it readable.
         """
         
         messages.append({"role": "assistant", "content": analysis})
@@ -180,21 +183,32 @@ class ArchitectAgent:
         
         try:
             response = self._get_completion(messages)
-            return json.loads(response)
-        except json.JSONDecodeError:
-            st.error("Error parsing architecture plan. Using fallback response.")
+            plan = json.loads(response)
+            
+            # Validate the response structure
+            if not all(key in plan for key in ['option1', 'option2']):
+                raise KeyError("Missing required options in response")
+            
+            for option in ['option1', 'option2']:
+                if not all(key in plan[option] for key in ['technical', 'process', 'people', 'rationale']):
+                    raise KeyError(f"Missing required fields in {option}")
+            
+            return plan
+            
+        except (json.JSONDecodeError, KeyError) as e:
+            st.error(f"Error parsing architecture plan: {str(e)}. Using fallback response.")
             return {
                 "option1": {
-                    "technical": "# Technical Architecture\n\nUnable to generate technical details. Please try again.",
-                    "process": "# Key Processes\n\nUnable to generate process recommendations. Please try again.",
-                    "people": "# People & Organization\n\nUnable to generate organizational recommendations. Please try again.",
-                    "rationale": "# Rationale & Benefits\n\nUnable to generate rationale. Please try again."
+                    "technical": "# Technical Architecture\n\n- Unable to generate technical details. Please try again.",
+                    "process": "# Key Processes\n\n- Unable to generate process recommendations. Please try again.",
+                    "people": "# People & Organization\n\n- Unable to generate organizational recommendations. Please try again.",
+                    "rationale": "# Rationale & Benefits\n\n- Unable to generate rationale. Please try again."
                 },
                 "option2": {
-                    "technical": "# Technical Architecture\n\nUnable to generate technical details. Please try again.",
-                    "process": "# Key Processes\n\nUnable to generate process recommendations. Please try again.",
-                    "people": "# People & Organization\n\nUnable to generate organizational recommendations. Please try again.",
-                    "rationale": "# Rationale & Benefits\n\nUnable to generate rationale. Please try again."
+                    "technical": "# Technical Architecture\n\n- Unable to generate technical details. Please try again.",
+                    "process": "# Key Processes\n\n- Unable to generate process recommendations. Please try again.",
+                    "people": "# People & Organization\n\n- Unable to generate organizational recommendations. Please try again.",
+                    "rationale": "# Rationale & Benefits\n\n- Unable to generate rationale. Please try again."
                 }
             }
 
