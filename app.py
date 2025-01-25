@@ -3,6 +3,8 @@ import openai
 from typing import List, Dict
 import json
 
+#Test Commit
+
 # Configure page and API key
 st.set_page_config(page_title="Architect Guru", page_icon="🏗️", layout="wide")
 openai.api_key = st.secrets["OPENAI_API_KEY"]
