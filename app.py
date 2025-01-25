@@ -111,12 +111,14 @@ def initialize_session_state():
         st.session_state.answers = {}
     if 'architecture_plan' not in st.session_state:
         st.session_state.architecture_plan = None
+    if 'form_data' not in st.session_state:
+        st.session_state.form_data = {}
 
 def main():
     st.title("🏗️ Architect Guru")
     st.subheader("Your AI Software Architecture Consultant")
     
-    # Initialize the agent
+    # Initialize the agent and session state
     agent = ArchitectAgent()
     initialize_session_state()
     
@@ -134,6 +136,11 @@ def main():
             submit_button = st.form_submit_button("Generate Questions")
             
             if submit_button and project_description:
+                # Store form data
+                st.session_state.form_data = {
+                    'project_name': project_name,
+                    'project_description': project_description
+                }
                 st.session_state.project_info = {
                     "description": project_description,
                     "challenges": challenges
