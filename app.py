@@ -120,10 +120,6 @@ def main():
     agent = ArchitectAgent()
     initialize_session_state()
     
-    # Initialize form data in session state if needed
-    if 'form_data' not in st.session_state:
-        st.session_state.form_data = {}
-    
     if st.session_state.current_step == 0:
         st.write("### Project Description")
         with st.form("project_form"):
@@ -151,7 +147,8 @@ def main():
     
     elif st.session_state.current_step == 1:
         st.write("### Project Analysis Questions")
-        with st.form("questions"):
+        with st.form("questions_form"):
+            answers = {}
             for i, question in enumerate(st.session_state.questions):
                 answer = st.text_input(
                     f"Q{i+1}: {question}",
@@ -159,11 +156,12 @@ def main():
                     help="Type 'don't know' if you're unsure about this aspect"
                 )
                 if answer:
-                    st.session_state.answers[question] = answer
+                    answers[question] = answer
             
             submit_answers = st.form_submit_button("Generate Architecture Plan")
             
             if submit_answers:
+                st.session_state.answers = answers
                 with st.spinner("Analyzing and generating architecture plan..."):
                     st.session_state.architecture_plan = agent.generate_architecture_plan(
                         st.session_state.project_info,
