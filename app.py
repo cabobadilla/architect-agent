@@ -108,13 +108,17 @@ def main():
     agent = ArchitectAgent()
     initialize_session_state()
     
+    # Initialize form data in session state if needed
+    if 'form_data' not in st.session_state:
+        st.session_state.form_data = {}
+    
     if st.session_state.current_step == 0:
         st.write("### Project Description")
-        with st.form("project_info"):
-            project_description = st.text_area(
-                "Describe your software project:",
-                placeholder="E.g., A mobile banking app with enhanced security features..."
-            )
+        with st.form("project_form"):
+            project_name = st.text_input("Project Name", 
+                                       value=st.session_state.form_data.get('project_name', ''))
+            project_description = st.text_area("Project Description",
+                                             value=st.session_state.form_data.get('project_description', ''))
             challenges = st.multiselect(
                 "Select your main challenges:",
                 ["Security", "Time to Market", "Performance", "User Experience", "Scalability", "Cost Efficiency"]
