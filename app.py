@@ -125,17 +125,23 @@ class ArchitectAgent:
         Final phase: Generate detailed solution recommendations
         """
         analysis_prompt = f"""
-        Analyze all gathered information to generate optimal solution recommendations:
+        As an expert software architect, analyze all gathered information to generate optimal solution recommendations:
         
-        Project Info: {json.dumps(project_info, indent=2)}
-        Scope Understanding: {json.dumps(scope_answers, indent=2)}
-        Solution Exploration: {json.dumps(solution_answers, indent=2)}
+        Project Description: {project_info['description']}
+        Main Challenge: {project_info['main_challenge']}
+        Additional Challenges: {', '.join(project_info.get('challenges', []))}
         
-        Synthesize this information to identify the most suitable architectural approaches.
+        Scope Information:
+        {json.dumps(scope_answers, indent=2)}
+        
+        Solution Details:
+        {json.dumps(solution_answers, indent=2)}
+        
+        Provide a comprehensive analysis focusing on key requirements, constraints, and potential approaches.
         """
         
         messages = [
-            {"role": "system", "content": "You are an expert software architect creating final recommendations."},
+            {"role": "system", "content": "You are an expert software architect creating detailed solution recommendations. Always provide comprehensive, well-structured responses using markdown formatting."},
             {"role": "user", "content": analysis_prompt}
         ]
         
@@ -148,40 +154,54 @@ class ArchitectAgent:
         
         Generate TWO distinct architectural options that best address the requirements and constraints.
         
-        For each option, provide:
+        VERY IMPORTANT: Format your response as a JSON object with this EXACT structure:
+        {{
+            "option1": {{
+                "overview": "# Solution Overview\\n\\n## Key Points\\n- Point 1\\n- Point 2\\n\\n## Main Benefits\\n1. Benefit 1\\n2. Benefit 2",
+                "technical": "# Technical Details\\n\\n## Architecture\\n- Component 1\\n- Component 2\\n\\n## Technology Stack\\n1. Tech 1\\n2. Tech 2",
+                "implementation": "# Implementation Strategy\\n\\n## Phases\\n1. Phase 1\\n2. Phase 2\\n\\n## Team Structure\\n- Team 1\\n- Team 2",
+                "rationale": "# Decision Rationale\\n\\n## Why This Solution\\n- Reason 1\\n- Reason 2\\n\\n## Risk Analysis\\n1. Risk 1\\n2. Risk 2"
+            }},
+            "option2": {{
+                "overview": "...",
+                "technical": "...",
+                "implementation": "...",
+                "rationale": "..."
+            }}
+        }}
 
-        1. Solution Overview:
+        For each option, include:
+
+        1. Solution Overview (overview):
            - High-level architecture description
            - Key architectural decisions
            - How it addresses the main challenge
            - Primary benefits and trade-offs
 
-        2. Technical Details:
-           - Technology stack and components
-           - Integration approach
-           - Scalability and performance considerations
-           - Security measures
+        2. Technical Details (technical):
+           - Detailed technology stack
+           - Component architecture
+           - Integration patterns
+           - Security and scalability measures
 
-        3. Implementation Strategy:
-           - Development approach
-           - Team structure and skills needed
-           - Risk mitigation strategies
-           - Timeline and phases
+        3. Implementation Strategy (implementation):
+           - Phased approach
+           - Team structure and roles
+           - Risk mitigation steps
+           - Timeline and milestones
 
-        4. Rationale:
-           - Why this solution fits the requirements
+        4. Decision Rationale (rationale):
+           - Why this solution is recommended
            - Cost-benefit analysis
            - Risk assessment
-           - Success factors
+           - Critical success factors
 
         IMPORTANT:
-        - Clearly explain why each option is suitable
-        - Address all major concerns from the discovery phase
-        - Provide concrete implementation guidance
-        - Include success metrics and validation criteria
-
-        Return as a JSON object with 'option1' and 'option2', each containing 'overview', 'technical', 'implementation', and 'rationale' sections.
-        Use markdown formatting for readability.
+        - Use proper markdown formatting with headers, lists, and sections
+        - Be specific and detailed in each section
+        - Explain the reasoning behind each decision
+        - Include concrete examples and metrics where possible
+        - Ensure the response is a valid JSON object
         """
         
         messages.append({"role": "assistant", "content": analysis})
@@ -189,9 +209,144 @@ class ArchitectAgent:
         
         try:
             response = self._get_completion(messages)
-            return json.loads(response)
-        except json.JSONDecodeError:
-            return self._get_fallback_recommendations()
+            recommendations = json.loads(response)
+            
+            # Validate the response structure
+            required_sections = ['overview', 'technical', 'implementation', 'rationale']
+            for option in ['option1', 'option2']:
+                if option not in recommendations:
+                    raise KeyError(f"Missing {option} in recommendations")
+                for section in required_sections:
+                    if section not in recommendations[option]:
+                        raise KeyError(f"Missing {section} in {option}")
+                    if not recommendations[option][section].strip():
+                        raise ValueError(f"Empty content in {option}.{section}")
+            
+            return recommendations
+            
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            st.error(f"Error generating recommendations: {str(e)}")
+            return {
+                "option1": {
+                    "overview": """# Solution Overview
+
+## Architecture Approach
+- Modular, scalable architecture
+- Focus on maintainability and extensibility
+
+## Key Benefits
+1. Scalable solution
+2. Easy to maintain
+3. Cost-effective implementation
+
+## Main Features
+- Core functionality implementation
+- Integration capabilities
+- Security measures""",
+                    "technical": """# Technical Details
+
+## Technology Stack
+- Backend: Python/Java
+- Frontend: React/Angular
+- Database: PostgreSQL/MongoDB
+
+## Components
+1. User Interface Layer
+2. Business Logic Layer
+3. Data Access Layer
+
+## Security
+- Authentication & Authorization
+- Data Encryption
+- Secure Communications""",
+                    "implementation": """# Implementation Strategy
+
+## Phases
+1. Initial Setup & Core Features
+2. Integration & Testing
+3. Deployment & Optimization
+
+## Team Structure
+- Frontend Developers
+- Backend Developers
+- DevOps Engineers
+- QA Team""",
+                    "rationale": """# Decision Rationale
+
+## Why This Approach
+- Matches project requirements
+- Balances cost and performance
+- Supports future scaling
+
+## Risk Assessment
+1. Technical Risks
+2. Timeline Risks
+3. Resource Risks
+
+## Mitigation Strategies
+- Detailed planning
+- Regular reviews
+- Continuous testing"""
+                },
+                "option2": {
+                    "overview": """# Solution Overview
+
+## Architecture Approach
+- Cloud-native architecture
+- Microservices-based design
+
+## Key Benefits
+1. High availability
+2. Easy scaling
+3. Modern architecture
+
+## Main Features
+- Distributed system
+- Cloud services integration
+- Advanced monitoring""",
+                    "technical": """# Technical Details
+
+## Technology Stack
+- Cloud Platform: AWS/Azure
+- Containerization: Docker/Kubernetes
+- Serverless Components
+
+## Components
+1. Microservices
+2. API Gateway
+3. Message Queue
+4. Data Store""",
+                    "implementation": """# Implementation Strategy
+
+## Phases
+1. Cloud Infrastructure Setup
+2. Service Implementation
+3. Integration & Testing
+4. Deployment
+
+## Team Structure
+- Cloud Architects
+- DevOps Engineers
+- Full-stack Developers
+- SRE Team""",
+                    "rationale": """# Decision Rationale
+
+## Why This Approach
+- Modern and future-proof
+- Highly scalable
+- Cost-effective long-term
+
+## Risk Assessment
+1. Complexity Risks
+2. Integration Risks
+3. Skills Gap Risks
+
+## Mitigation Strategies
+- Team training
+- Phased implementation
+- Expert consultation"""
+                }
+            }
 
     def _get_fallback_scope_questions(self) -> List[str]:
         return [
@@ -212,22 +367,6 @@ class ArchitectAgent:
             "What are your primary security and compliance needs?",
             "What is your preferred development methodology?"
         ]
-
-    def _get_fallback_recommendations(self) -> Dict:
-        return {
-            "option1": {
-                "overview": "# Solution Overview\n\nUnable to generate overview.",
-                "technical": "# Technical Details\n\nUnable to generate technical details.",
-                "implementation": "# Implementation Strategy\n\nUnable to generate implementation strategy.",
-                "rationale": "# Rationale\n\nUnable to generate rationale."
-            },
-            "option2": {
-                "overview": "# Solution Overview\n\nUnable to generate overview.",
-                "technical": "# Technical Details\n\nUnable to generate technical details.",
-                "implementation": "# Implementation Strategy\n\nUnable to generate implementation strategy.",
-                "rationale": "# Rationale\n\nUnable to generate rationale."
-            }
-        }
 
 def initialize_session_state():
     """
